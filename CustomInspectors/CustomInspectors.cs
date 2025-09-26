@@ -16,7 +16,7 @@ namespace CustomInspectors
     {
         public override string Name => "CustomInspectors";
         public override string Author => "art0007i";
-        public override string Version => "2.2.0";
+        public override string Version => "2.2.1";
         public override string Link => "https://github.com/art0007i/CustomInspectors/";
 
         [AutoRegisterConfigKey]
@@ -72,16 +72,20 @@ namespace CustomInspectors
                 // If no favorite item has been selected spawn the default one
                 if (OurItem.Uri == null) return true;
 
+                var configuredScale = config.GetValue(KEY_INSPECTOR_SCALE);
+                __instance.Slot.LocalScale *= configuredScale;
+
                 __instance.StartTask(async () =>
                 {
-                    // Store the current transform in case spawning a custom inspector fails
-                    var pos = __instance.Slot.GlobalPosition;
-                    var rot = __instance.Slot.GlobalRotation;
-                    var scl = __instance.Slot.GlobalScale * 0.0005f;
+                    await new Updates(0);
 
                     if (await SpawnCustomInspector(__instance))
                     {
+                        Warn("Custom Inspector failed to generate, using fallback behaviour.");
                         await default(ToWorld);
+
+                        // Reset the scale to default
+                        __instance.Slot.LocalScale /= configuredScale;
 
                         // apparently the reentrant method is some kind of static void DMD<DMD<>?45188956::FrooxEngine.SceneInspector::OnAttach>(FrooxEngine.SceneInspector this)
                         // I swear it used to not be like that but whatever.
@@ -89,10 +93,6 @@ namespace CustomInspectors
                             reentrantMethod.Invoke(null, [__instance]);
                         else
                             reentrantMethod.Invoke(__instance, []);
-
-                        __instance.Slot.GlobalPosition = pos;
-                        __instance.Slot.GlobalRotation = rot;
-                        __instance.Slot.GlobalScale = scl;
                     }
                 });
 
@@ -101,6 +101,9 @@ namespace CustomInspectors
 
             public static async Task<bool> SpawnCustomInspector(SceneInspector __instance)
             {
+                float3? restorePos = null;
+                floatQ? restoreRot = null;
+                float3? restoreScl = null;
                 try
                 {
                     await default(ToBackground);
@@ -186,7 +189,10 @@ namespace CustomInspectors
                     {
                         var pos = __instance.Slot.GlobalPosition;
                         var rot = __instance.Slot.GlobalRotation;
-                        var scl = __instance.Slot.GlobalScale * config.GetValue(KEY_INSPECTOR_SCALE);
+                        var scl = __instance.Slot.GlobalScale;
+                        restorePos = pos;
+                        restoreRot = rot;
+                        restoreScl = scl;
 
                         __instance.Slot.LoadObject(node, null, refTranslator: translator);
                         var old = __instance.Slot.GetComponent<SceneInspector>((insp) => insp != __instance);
@@ -214,6 +220,12 @@ namespace CustomInspectors
                 catch (Exception e)
                 {
                     Error("Failed to spawn custom inspector: " + e.ToString());
+                    if(!__instance.IsRemoved && !__instance.Slot.IsRemoved)
+                    {
+                        if (restorePos != null) __instance.Slot.GlobalPosition = restorePos.Value;
+                        if (restoreRot != null) __instance.Slot.GlobalRotation = restoreRot.Value;
+                        if (restoreScl != null) __instance.Slot.GlobalScale = restoreScl.Value;
+                    }
                 }
                 return true;
             }
