@@ -15,9 +15,11 @@ namespace CustomInspectors
     public class CustomInspectors : ResoniteMod
     {
         public override string Name => "CustomInspectors";
-        public override string Author => "art0007i";
-        public override string Version => "2.2.1";
-        public override string Link => "https://github.com/art0007i/CustomInspectors/";
+        public override string Author => "art0007i | Modernised by: NalaTheThird";
+        public override string Version => VERSION_CONSTANT;
+
+        internal const string VERSION_CONSTANT = "2.3.0";
+        public override string Link => "https://github.com/nalathethird/CustomInspectors/";
 
         [AutoRegisterConfigKey]
         public static ModConfigurationKey<float> KEY_INSPECTOR_SCALE = new("inspector_scale", "Changes the default inspector scale to this value.\n0.0005 by default, because that's what the actual inspectors default scale is.", () => 0.0005f);
@@ -29,10 +31,10 @@ namespace CustomInspectors
         public override void OnEngineInit()
         {
             config = GetConfiguration();
-            Harmony harmony = new Harmony("me.art0007i.CustomInspectors");
+            Harmony harmony = new Harmony("com.nalathethird.CustomInspectors");
 
             var orig = AccessTools.Method(typeof(SceneInspector), "OnAttach");
-            reentrantMethod = (DynamicMethod) harmony.Patch(orig);
+            reentrantMethod = (DynamicMethod)harmony.Patch(orig);
 
             // Register the special item.
             // The readable name will be shown to users in the inventory in this format: "Set {0}"
@@ -220,7 +222,7 @@ namespace CustomInspectors
                 catch (Exception e)
                 {
                     Error("Failed to spawn custom inspector: " + e.ToString());
-                    if(!__instance.IsRemoved && !__instance.Slot.IsRemoved)
+                    if (!__instance.IsRemoved && !__instance.Slot.IsRemoved)
                     {
                         if (restorePos != null) __instance.Slot.GlobalPosition = restorePos.Value;
                         if (restoreRot != null) __instance.Slot.GlobalRotation = restoreRot.Value;
